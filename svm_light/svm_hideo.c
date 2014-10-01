@@ -18,15 +18,16 @@
 
 # include <math.h>
 # include "svm_common.h"
+# include "svm_hideo.h"
 
-/* 
+/*
   solve the quadratic programming problem
- 
+
   minimize   g0 * x + 1/2 x' * G * x
   subject to ce*x - ce0 = 0
              l <= x <= u
- 
-  The linear constraint vector ce can only have -1/+1 as entries 
+
+  The linear constraint vector ce can only have -1/+1 as entries
 */
 
 /* Common Block Declarations */
@@ -88,7 +89,7 @@ double *optimize_qp(qp,epsilon_crit,nx,threshold,learn_parm)
 QP *qp;
 double *epsilon_crit;
 long nx; /* Maximum number of variables in QP */
-double *threshold; 
+double *threshold;
 LEARN_PARM *learn_parm;
 /* start the optimizer and return the optimal values */
 /* The HIDEO optimizer does not necessarily fully solve the problem. */
@@ -145,11 +146,11 @@ LEARN_PARM *learn_parm;
 				 qp->opt_g,qp->opt_g0,qp->opt_ce,qp->opt_ce0,
 				 qp->opt_low,qp->opt_up,primal,qp->opt_xinit,
 				 dual,nonoptimal,buffer,&progress);
-  if(verbosity>=3) { 
+  if(verbosity>=3) {
     printf("return(%d)...",result);
   }
 
-  if(learn_parm->totwords < learn_parm->svm_maxqpsize) { 
+  if(learn_parm->totwords < learn_parm->svm_maxqpsize) {
     /* larger working sets will be linear dependent anyway */
     learn_parm->svm_maxqpsize=maxl(learn_parm->totwords,(long)2);
   }
@@ -176,14 +177,14 @@ LEARN_PARM *learn_parm;
 				   qp->opt_g,qp->opt_g0,qp->opt_ce,qp->opt_ce0,
 				   qp->opt_low,qp->opt_up,primal,qp->opt_xinit,
 				   dual,nonoptimal,buffer,&progress);
-    if(verbosity>=3) { 
+    if(verbosity>=3) {
       printf("return_srd(%d)...",result);
     }
 
     if(result != PRIMAL_OPTIMAL) {
-      if(result != ONLY_ONE_VARIABLE) 
+      if(result != ONLY_ONE_VARIABLE)
 	precision_violations++;
-      if(result == MAXITER_EXCEEDED) 
+      if(result == MAXITER_EXCEEDED)
 	maxiter+=100;
       if(result == NAN_SOLUTION) {
 	lindep_sensitivity*=2;  /* throw out linear dependent examples more */
@@ -199,12 +200,12 @@ LEARN_PARM *learn_parm;
 
   if(precision_violations > 50) {
     precision_violations=0;
-    (*epsilon_crit)*=10.0; 
+    (*epsilon_crit)*=10.0;
     if(verbosity>=1) {
       printf("\nWARNING: Relaxing epsilon on KT-Conditions (%f).\n",
 	     (*epsilon_crit));
     }
-  }	  
+  }
 
   if((qp->opt_m>0) && (result != NAN_SOLUTION) && (!isnan(dual[1]-dual[0])))
     (*threshold)=dual[1]-dual[0];
@@ -260,11 +261,11 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
 {
   long i,j,k,from,to,n_indep,changed;
   double sum,bmin=0,bmax=0;
-  double *d,*d0,*ig,*dual_old,*temp,*start;       
+  double *d,*d0,*ig,*dual_old,*temp,*start;
   double *g0_new,*g_new,*ce_new,*ce0_new,*low_new,*up_new;
   double add,t;
   int result;
-  double obj_before,obj_after; 
+  double obj_before,obj_after;
   long b1,b2;
   double g0_b1,g0_b2,ce0_b;
 
@@ -284,18 +285,18 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   b1=-1;
   b2=-1;
   for(i=0;i<n;i++) {   /* get variables with steepest feasible descent */
-    sum=g0[i];         
-    for(j=0;j<n;j++) 
+    sum=g0[i];
+    for(j=0;j<n;j++)
       sum+=init[j]*g[i*n+j];
     sum=sum*ce[i];
-    if(((b1==-1) || (sum<bmin)) 
+    if(((b1==-1) || (sum<bmin))
        && (!((init[i]<=(low[i]+epsilon_a)) && (ce[i]<0.0)))
        && (!((init[i]>=( up[i]-epsilon_a)) && (ce[i]>0.0)))
        ) {
       bmin=sum;
       b1=i;
     }
-    if(((b2==-1) || (sum>=bmax)) 
+    if(((b2==-1) || (sum>=bmax))
        && (!((init[i]<=(low[i]+epsilon_a)) && (ce[i]>0.0)))
        && (!((init[i]>=( up[i]-epsilon_a)) && (ce[i]<0.0)))
        ) {
@@ -320,18 +321,18 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   changed=0;
   if((b1 != b2) && (m==1)) {
     for(i=0;i<n;i++) {  /* fix other vectors */
-      if(i==b1) 
+      if(i==b1)
 	g0_b1=g0[i];
-      if(i==b2) 
+      if(i==b2)
 	g0_b2=g0[i];
     }
     ce0_b=ce0[0];
-    for(i=0;i<n;i++) {  
+    for(i=0;i<n;i++) {
       if((i!=b1) && (i!=b2)) {
 	for(j=0;j<n;j++) {
-	  if(j==b1) 
+	  if(j==b1)
 	    g0_b1+=start[i]*g[i*n+j];
-	  if(j==b2) 
+	  if(j==b2)
 	    g0_b2+=start[i]*g[i*n+j];
 	}
 	ce0_b-=(start[i]*ce[i]);
@@ -339,7 +340,7 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
     }
     if((g[b1*n+b2] == g[b1*n+b1]) && (g[b1*n+b2] == g[b2*n+b2])) {
       /* printf("euqal\n"); */
-      if(ce[b1] == ce[b2]) { 
+      if(ce[b1] == ce[b2]) {
 	if(g0_b1 <= g0_b2) { /* set b1 to upper bound */
 	  /* printf("case +=<\n"); */
 	  changed=1;
@@ -361,7 +362,7 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
 	  start[b2]=init[b2]+t;
 	}
       }
-      else if(((g[b1*n+b1]>0) || (g[b2*n+b2]>0))) { /* (ce[b1] != ce[b2]) */ 
+      else if(((g[b1*n+b1]>0) || (g[b2*n+b2]>0))) { /* (ce[b1] != ce[b2]) */
 	/* printf("case +!\n"); */
 	t=((ce[b2]/ce[b1])*g0[b1]-g0[b2]+ce0[0]*(g[b1*n+b1]*ce[b2]/ce[b1]-g[b1*n+b2]/ce[b1]))/((ce[b2]*ce[b2]/(ce[b1]*ce[b1]))*g[b1*n+b1]+g[b2*n+b2]-2*(g[b1*n+b2]*ce[b2]/ce[b1]))-init[b2];
 	changed=1;
@@ -393,7 +394,7 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
 	  }
 	  start[b1]=init[b1]+t;
 	  start[b2]=init[b2]+t;
-	}     
+	}
 	else if((g0_b1+g0_b2) >= 0) { /* set b1 and b2 to lower bound */
 	  /* printf("case -!>\n"); */
 	  changed=1;
@@ -423,39 +424,39 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
 	}
 	start[b1]=init[b1]-t;
 	start[b2]=init[b2]+t;
-      }	
+      }
     }
   }
   /* if we have a biased hyperplane, then adding a constant to the */
   /* hessian does not change the solution. So that is done for examples */
   /* with zero diagonal entry, since HIDEO cannot handle them. */
-  if((m>0) 
-     && ((fabs(g[b1*n+b1]) < lindep_sensitivity) 
+  if((m>0)
+     && ((fabs(g[b1*n+b1]) < lindep_sensitivity)
 	 || (fabs(g[b2*n+b2]) < lindep_sensitivity))) {
     /* printf("Case 0\n"); */
     add+=0.093274;
-  }    
+  }
   /* in case both examples are linear dependent */
-  else if((m>0) 
+  else if((m>0)
 	  && (g[b1*n+b2] != 0 && g[b2*n+b2] != 0)
 	  && (fabs(g[b1*n+b1]/g[b1*n+b2] - g[b1*n+b2]/g[b2*n+b2])
-	      < lindep_sensitivity)) { 
+	      < lindep_sensitivity)) {
     /* printf("Case lindep\n"); */
     add+=0.078274;
   }
 
   /* special case for zero diagonal entry on unbiased hyperplane */
   if((m==0) && (b1>=0))  {
-    if(fabs(g[b1*n+b1]) < lindep_sensitivity) { 
+    if(fabs(g[b1*n+b1]) < lindep_sensitivity) {
       /* printf("Case 0b1\n"); */
       for(i=0;i<n;i++) {  /* fix other vectors */
-	if(i==b1) 
+	if(i==b1)
 	  g0_b1=g0[i];
       }
-      for(i=0;i<n;i++) {  
+      for(i=0;i<n;i++) {
 	if(i!=b1) {
 	  for(j=0;j<n;j++) {
-	    if(j==b1) 
+	    if(j==b1)
 	      g0_b1+=start[i]*g[i*n+j];
 	  }
 	}
@@ -467,16 +468,16 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
     }
   }
   if((m==0) && (b2>=0))  {
-    if(fabs(g[b2*n+b2]) < lindep_sensitivity) { 
+    if(fabs(g[b2*n+b2]) < lindep_sensitivity) {
       /* printf("Case 0b2\n"); */
       for(i=0;i<n;i++) {  /* fix other vectors */
-	if(i==b2) 
+	if(i==b2)
 	  g0_b2=g0[i];
       }
-      for(i=0;i<n;i++) {  
+      for(i=0;i<n;i++) {
 	if(i!=b2) {
 	  for(j=0;j<n;j++) {
-	    if(j==b2) 
+	    if(j==b2)
 	      g0_b2+=start[i]*g[i*n+j];
 	  }
 	}
@@ -503,11 +504,11 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   }
 
   if(n>2) {                    /* switch, so that variables are better mixed */
-    lswitchrk_matrix(d,n,b1,(long)0); 
-    if(b2 == 0) 
-      lswitchrk_matrix(d,n,b1,(long)1); 
+    lswitchrk_matrix(d,n,b1,(long)0);
+    if(b2 == 0)
+      lswitchrk_matrix(d,n,b1,(long)1);
     else
-      lswitchrk_matrix(d,n,b2,(long)1); 
+      lswitchrk_matrix(d,n,b2,(long)1);
   }
   if(smallround == SMALLROUND) {
     for(i=2;i<n;i++) {
@@ -530,19 +531,19 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   linvert_matrix(d,n,ig,lindep_sensitivity,lin_dependent);
   if(n>2) {                    /* now switch back */
     if(b2 == 0) {
-      lswitchrk_matrix(ig,n,b1,(long)1); 
-      i=lin_dependent[1];  
+      lswitchrk_matrix(ig,n,b1,(long)1);
+      i=lin_dependent[1];
       lin_dependent[1]=lin_dependent[b1];
       lin_dependent[b1]=i;
     }
     else {
-      lswitchrk_matrix(ig,n,b2,(long)1); 
-      i=lin_dependent[1];  
+      lswitchrk_matrix(ig,n,b2,(long)1);
+      i=lin_dependent[1];
       lin_dependent[1]=lin_dependent[b2];
       lin_dependent[b2]=i;
     }
-    lswitchrk_matrix(ig,n,b1,(long)0); 
-    i=lin_dependent[0];  
+    lswitchrk_matrix(ig,n,b1,(long)0);
+    i=lin_dependent[0];
     lin_dependent[0]=lin_dependent[b1];
     lin_dependent[b1]=i;
   }
@@ -577,7 +578,7 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   for(i=0;i<n;i++) {
     if(!lin_dependent[i]) {
       g0_new[n_indep]=g0_new[i];
-      ce_new[n_indep]=ce[i]; 
+      ce_new[n_indep]=ce[i];
       low_new[n_indep]=low[i];
       up_new[n_indep]=up[i];
       primal[n_indep]=start[i];
@@ -596,16 +597,16 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   if(verbosity>=3) {
     printf("real_qp_size(%ld)...",n_indep);
   }
-  
+
   /* cannot optimize with only one variable */
-  if((n_indep<=1) && (m>0) && (!changed)) { 
+  if((n_indep<=1) && (m>0) && (!changed)) {
     for(i=n-1;i>=0;i--) {
       primal[i]=init[i];
     }
     return((int)ONLY_ONE_VARIABLE);
   }
 
-  if((!changed) || (n_indep>1)) { 
+  if((!changed) || (n_indep>1)) {
     result=solve_dual(n_indep,m,precision,epsilon_crit,maxiter,g_new,g0_new,
 		      ce_new,ce0_new,low_new,up_new,primal,d,d0,ig,
 		      dual,dual_old,temp,goal);
@@ -613,7 +614,7 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
   else {
     result=PRIMAL_OPTIMAL;
   }
-  
+
   j=n_indep;
   for(i=n-1;i>=0;i--) {
     if(!lin_dependent[i]) {
@@ -625,13 +626,13 @@ int optimize_hildreth_despo(n,m,precision,epsilon_crit,epsilon_a,maxiter,goal,
     }
     temp[i]=primal[i];
   }
-   
+
   obj_before=calculate_qp_objective(n,g,g0,init);
   obj_after=calculate_qp_objective(n,g,g0,primal);
   (*progress)=obj_before-obj_after;
   if(verbosity>=3) {
     printf("before(%.30f)...after(%.30f)...result_sd(%d)...",
-	   obj_before,obj_after,result); 
+	   obj_before,obj_after,result);
   }
 
   return((int)result);
@@ -662,12 +663,12 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
   double model_b,dist;
   long retrain,maxfaktor,primal_optimal=0,at_bound,scalemaxiter;
   double epsilon_a=1E-15,epsilon_hideo;
-  double eq; 
+  double eq;
 
-  if((m<0) || (m>1)) 
+  if((m<0) || (m>1))
     perror("SOLVE DUAL: inappropriate number of eq-constrains!");
 
-  /*  
+  /*
   printf("\n");
   for(i=0;i<n;i++) {
     printf("%f: ",g0[i]);
@@ -683,7 +684,7 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
     dual[i]=0;
     dual_old[i]=0;
   }
-  for(i=0;i<n;i++) {   
+  for(i=0;i<n;i++) {
     for(j=0;j<n;j++) {   /* dual hessian for box constraints */
       d[i*2*(n+m)+j]=ig[i*n+j];
       d[(i+n)*2*(n+m)+j]=-ig[i*n+j];
@@ -703,7 +704,7 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
       d[(n+n+1)*2*(n+m)+i]=-sum;
       d[(n+n)*2*(n+m)+(n+i)]=-sum;
       d[(n+n+1)*2*(n+m)+(n+i)]=sum;
-      
+
       sum=0;
       for(j=0;j<n;j++) {
 	for(k=0;k<n;k++) {
@@ -714,23 +715,23 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
       d[(n+n)*2*(n+m)+2*n+1]=-sum;
       d[(n+n+1)*2*(n+m)+2*n]=-sum;
       d[(n+n+1)*2*(n+m)+2*n+1]=sum;
-    } 
+    }
   }
 
   for(i=0;i<n;i++) {   /* dual linear component for the box constraints */
     w=0;
     for(j=0;j<n;j++) {
-      w+=(ig[i*n+j]*g0[j]); 
+      w+=(ig[i*n+j]*g0[j]);
     }
     d0[i]=up[i]+w;
     d0[i+n]=-low[i]-w;
   }
 
-  if(m>0) {  
+  if(m>0) {
     sum=0;             /* dual linear component for eq constraints */
     for(j=0;j<n;j++) {
       for(k=0;k<n;k++) {
-	sum+=(ce[k]*ig[k*n+j]*g0[j]); 
+	sum+=(ce[k]*ig[k*n+j]*g0[j]);
       }
     }
     d0[2*n]=ce0[0]+sum;
@@ -744,7 +745,7 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
   scalemaxiter=maxiter/5;
   while((retrain) && (maxviol > 0) && (iter < (scalemaxiter*maxfaktor))) {
     iter++;
-    
+
     while((maxviol > precision) && (iter < (scalemaxiter*maxfaktor))) {
       iter++;
       maxviol=0;
@@ -756,22 +757,22 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
 	sum-=d[i*2*(n+m)+i]*dual_old[i];
 	dual[i]=-sum/d[i*2*(n+m)+i];
 	if(dual[i]<0) dual[i]=0;
-	
+
 	viol=fabs(dual[i]-dual_old[i]);
-	if(viol>maxviol) 
+	if(viol>maxviol)
 	  maxviol=viol;
 	dual_old[i]=dual[i];
       }
       /*
-      printf("%d) maxviol=%20f precision=%f\n",iter,maxviol,precision); 
+      printf("%d) maxviol=%20f precision=%f\n",iter,maxviol,precision);
       */
     }
-  
+
     if(m>0) {
       for(i=0;i<n;i++) {
 	temp[i]=dual[i]-dual[i+n]+ce[i]*(dual[n+n]-dual[n+n+1])+g0[i];
       }
-    } 
+    }
     else {
       for(i=0;i<n;i++) {
 	temp[i]=dual[i]-dual[i+n]+g0[i];
@@ -791,14 +792,14 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
       }
     }
 
-    if(m>0) 
+    if(m>0)
       model_b=dual[n+n+1]-dual[n+n];
     else
       model_b=0;
 
     epsilon_hideo=EPSILON_HIDEO;
     for(i=0;i<n;i++) {           /* check precision of alphas */
-      dist=-model_b*ce[i]; 
+      dist=-model_b*ce[i];
       dist+=(g0[i]+1.0);
       for(j=0;j<i;j++) {
 	dist+=(primal[j]*g[j*n+i]);
@@ -828,7 +829,7 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
     primal_optimal=1;
     at_bound=0;
     for(i=0;(i<n);i++) {  /* check primal KT-Conditions */
-      dist=-model_b*ce[i]; 
+      dist=-model_b*ce[i];
       dist+=(g0[i]+1.0);
       for(j=0;j<i;j++) {
 	dist+=(primal[j]*g[j*n+i]);
@@ -851,12 +852,12 @@ int solve_dual(n,m,precision,epsilon_crit,maxiter,g,g0,ce,ce0,low,up,primal,
     }
     if(m>0) {
       eq=-ce0[0];               /* check precision of eq-constraint */
-      for(i=0;i<n;i++) { 
+      for(i=0;i<n;i++) {
 	eq+=(ce[i]*primal[i]);
       }
-      if((EPSILON_EQ < fabs(eq)) 
+      if((EPSILON_EQ < fabs(eq))
 	 /*
-	 && !((goal==PRIMAL_OPTIMAL) 
+	 && !((goal==PRIMAL_OPTIMAL)
 	       && (at_bound==n)) */
 	 ) {
 	retrain=1;
@@ -925,7 +926,7 @@ void linvert_matrix(matrix,depth,inverse,lindep_sensitivity,lin_dependent)
 double *matrix;
 long depth;
 double *inverse,lindep_sensitivity;
-long *lin_dependent;  /* indicates the active parts of matrix on 
+long *lin_dependent;  /* indicates the active parts of matrix on
 			 input and output*/
 {
   long i,j,k;
@@ -999,19 +1000,19 @@ double scalar;
   }
 }
 
-void lcopy_matrix(matrix,depth,matrix2) 
+void lcopy_matrix(matrix,depth,matrix2)
 double *matrix;
 long depth;
 double *matrix2;
 {
   long i;
-  
+
   for(i=0;i<(depth)*(depth);i++) {
     matrix2[i]=matrix[i];
   }
 }
 
-void lswitch_rows_matrix(matrix,depth,r1,r2) 
+void lswitch_rows_matrix(matrix,depth,r1,r2)
 double *matrix;
 long depth,r1,r2;
 {
@@ -1025,7 +1026,7 @@ long depth,r1,r2;
   }
 }
 
-void lswitchrk_matrix(matrix,depth,rk1,rk2) 
+void lswitchrk_matrix(matrix,depth,rk1,rk2)
 double *matrix;
 long depth,rk1,rk2;
 {

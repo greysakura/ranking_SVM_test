@@ -923,6 +923,7 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
   CFLOAT *aicache;  /* buffer to keep one row of hessian */
 
   TIMING timing_profile;
+    /* Shrink state? */
   SHRINK_STATE shrink_state;
 
   runtime_start=get_runtime();
@@ -972,8 +973,10 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
   model->xa_recall=-1;
   model->xa_precision=-1;
 
+  /* what's this for? */
   r_delta_avg=estimate_r_delta_average(docs,totdoc,kernel_parm);
   if(learn_parm->svm_c == 0.0) {  /* default value for C */
+    /* set C */
     learn_parm->svm_c=1.0/(r_delta_avg*r_delta_avg);
     if(verbosity>=1)
       printf("Setting default regularization parameter C=%.4f\n",
@@ -986,15 +989,15 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
                                in the right-hand side in the training
                                set.  */
 
-  for(i=0;i<totdoc;i++) {    /* various inits */
+  for(i=0;i<totdoc;i++) {    /* various inits */ /* For each document? */
     docs[i]->docnum=i;
-    a[i]=0;
+    a[i]=0; /* a? */
     lin[i]=0;
     c[i]=rhs[i];       /* set right-hand side */
     unlabeled[i]=0;
     inconsistent[i]=0;
     learn_parm->svm_cost[i]=learn_parm->svm_c*learn_parm->svm_costratio*
-      docs[i]->costfactor;
+      docs[i]->costfactor; /* C * costratio * costfactor  */
     label[i]=1;
   }
   if(learn_parm->sharedslack) /* if shared slacks are used, they must */
@@ -1023,8 +1026,10 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
     }
     index = (long *)my_malloc(sizeof(long)*totdoc);
     index2dnum = (long *)my_malloc(sizeof(long)*(totdoc+11));
+
+    /* if use LINEAR */
     if(kernel_parm->kernel_type == LINEAR) {
-      weights=(double *)my_malloc(sizeof(double)*(totwords+1));
+      weights=(double *)my_malloc(sizeof(double)*(totwords+1)); /* totwords +1: wTx + b */
       clear_nvector(weights,totwords); /* set weights to zero */
       aicache=NULL;
     }
@@ -1032,12 +1037,16 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
       weights=NULL;
       aicache = (CFLOAT *)my_malloc(sizeof(CFLOAT)*totdoc);
     }
+
+    /* What does index and alpha stand for? */
     for(i=0;i<totdoc;i++) {    /* create full index and clip alphas */
-      index[i]=1;
-      alpha[i]=fabs(alpha[i]);
+      index[i]=1; /* All 1? */
+      alpha[i]=fabs(alpha[i]); /* fabs: returns the absolute value of a floating-point number. */
       if(alpha[i]<0) alpha[i]=0;
       if(alpha[i]>learn_parm->svm_cost[i]) alpha[i]=learn_parm->svm_cost[i];
     }
+
+    /* Kernel part. Forget about this. */
     if(kernel_cache && (kernel_parm->kernel_type != LINEAR)) {
       for(i=0;i<totdoc;i++)     /* fill kernel cache with unbounded SV */
 	if((alpha[i]>0) && (alpha[i]<learn_parm->svm_cost[i])
@@ -1048,12 +1057,17 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
 	   && (kernel_cache_space_available(kernel_cache)))
 	  cache_kernel_row(kernel_cache,docs,i,kernel_parm);
     }
+    /* 2014/09/30 */
     (void)compute_index(index,totdoc,index2dnum);
+    /* index Vs. index2dnum? */
+
+    /* update linear component? */
     update_linear_component(docs,label,index2dnum,alpha,a,index2dnum,totdoc,
-			    totwords,kernel_parm,kernel_cache,lin,aicache,
-			    weights);
+			    totwords,kernel_parm,kernel_cache,lin,aicache,weights);
+    /* calculate svm model */
     (void)calculate_svm_model(docs,label,unlabeled,lin,alpha,a,c,
 			      learn_parm,index2dnum,index2dnum,model);
+
     for(i=0;i<totdoc;i++) {    /* copy initial alphas */
       a[i]=alpha[i];
     }
@@ -1061,6 +1075,8 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
     free(index2dnum);
     if(weights) free(weights);
     if(aicache) free(aicache);
+
+    /* Only a[i] is saved? */
     if(verbosity>=1) {
       printf("done.\n");  fflush(stdout);
     }
@@ -2153,6 +2169,7 @@ void add_to_index(long int *index, long int elem)
   index[i+1]=-1;
 }
 
+/* 2014/09/30 Here. What is binfeature? */
 long compute_index(long int *binfeature, long int range, long int *index)
      /* create an inverted index of binfeature */
 {
@@ -2293,6 +2310,7 @@ void compute_matrices_for_optimization(DOC **docs, long int *label,
   }
 }
 
+/*****************************************************/
 long calculate_svm_model(DOC **docs, long int *label, long int *unlabeled,
 			 double *lin, double *a, double *a_old, double *c,
 			 LEARN_PARM *learn_parm, long int *working2dnum,
@@ -2307,11 +2325,12 @@ long calculate_svm_model(DOC **docs, long int *label, long int *unlabeled,
     printf("Calculating model..."); fflush(stdout);
   }
 
+  /* set b to 0, and need to be calculated...  */
   if(!learn_parm->biased_hyperplane) {
     model->b=0;
     b_calculated=1;
   }
-
+  /* working 2dnum? what does this mean? */
   for(ii=0;(i=working2dnum[ii])>=0;ii++) {
     if((a_old[i]>0) && (a[i]==0)) { /* remove from model */
       pos=model->index[i];

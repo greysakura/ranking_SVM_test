@@ -151,6 +151,7 @@ SVECTOR *create_svector(WORD *words,char *userdefined,double factor)
   }
   vec->twonorm_sq=-1;
 
+    /* userdefined? for what? */
   if(userdefined) {
     vec->userdefined=(char *)my_malloc(sizeof(char)*(strlen(userdefined)+1));
     strcpy(vec->userdefined,userdefined);

@@ -47,6 +47,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="svm_light/svm_common.h" />
+		<Unit filename="svm_light/svm_hideo.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="svm_light/svm_hideo.h" />
+		<Unit filename="svm_light/svm_learn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="svm_light/svm_learn.h" />
 		<Unit filename="svm_struct/svm_struct_common.c">
 			<Option compilerVar="CC" />
 		</Unit>

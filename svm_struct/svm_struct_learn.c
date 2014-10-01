@@ -557,8 +557,12 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
   epsilon_cached=epsilon;         /* epsilon to use for iterations
 				     using constraints constructed
 				     from the constraint cache */
-
+    /* Initialize constraints. */
+    /* Build a CONSTSET, and set m. */
+    /* m is the total number of constrains */
   cset=init_struct_constraints(sample, sm, sparm);
+
+  /* Here they initialized alpha? */
   if(cset.m > 0) {
     alpha=(double *)realloc(alpha,sizeof(double)*cset.m);
     alphahist=(long *)realloc(alphahist,sizeof(long)*cset.m);
@@ -567,21 +571,28 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
       alphahist[i]=-1; /* -1 makes sure these constraints are never removed */
     }
   }
+
+  /* kernel parameter issue. */
   kparm->gram_matrix=NULL;
   if((alg_type == ONESLACK_DUAL_ALG) || (alg_type == ONESLACK_DUAL_CACHE_ALG))
     kparm->gram_matrix=init_kernel_matrix(&cset,kparm);
 
   /* set initial model and slack variables */
+  /* svmModel: a temporary MODEL */
   svmModel=(MODEL *)my_malloc(sizeof(MODEL));
   lparm->epsilon_crit=epsilon;
+
+  /* optimization part */
   svm_learn_optimization(cset.lhs,cset.rhs,cset.m,sizePsi,
 			 lparm,kparm,NULL,svmModel,alpha);
+
   add_weight_vector_to_linear_model(svmModel);
   sm->svm_model=svmModel;
   sm->w=svmModel->lin_weights; /* short cut to weight vector */
 
   /* create a cache of the feature vectors for the correct labels */
   fycache=(SVECTOR **)my_malloc(n*sizeof(SVECTOR *));
+  /**********************************************/
   for(i=0;i<n;i++) {
     if(USE_FYCACHE) {
       fy=psi(ex[i].x,ex[i].y,sm,sparm);
@@ -595,7 +606,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
       fy=NULL;
     fycache[i]=fy;
   }
-
+  /********************************************/
   /* initialize the constraint cache */
   /* One slack dual cache? */
   if(alg_type == ONESLACK_DUAL_CACHE_ALG) {
