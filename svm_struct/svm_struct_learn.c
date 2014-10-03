@@ -551,6 +551,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
     exit(0);
   }
 
+  /* Regression style. */
 
   lparm->biased_hyperplane=0;     /* set threshold to zero */
   epsilon=100.0;                  /* start with low precision and increase later */
@@ -583,9 +584,11 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
   lparm->epsilon_crit=epsilon;
 
   /* optimization part */
+  /* argmin? */
   svm_learn_optimization(cset.lhs,cset.rhs,cset.m,sizePsi,
 			 lparm,kparm,NULL,svmModel,alpha);
 
+  /* compute weight vector w in linear case and add to model */
   add_weight_vector_to_linear_model(svmModel);
   sm->svm_model=svmModel;
   sm->w=svmModel->lin_weights; /* short cut to weight vector */
@@ -593,6 +596,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
   /* create a cache of the feature vectors for the correct labels */
   fycache=(SVECTOR **)my_malloc(n*sizeof(SVECTOR *));
   /**********************************************/
+  /* Creating difference vectors. */
   for(i=0;i<n;i++) {
     if(USE_FYCACHE) {
       fy=psi(ex[i].x,ex[i].y,sm,sparm);

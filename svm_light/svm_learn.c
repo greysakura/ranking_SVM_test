@@ -1100,6 +1100,8 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
   /* train the svm */
 
   /* 2014/09/19 iteration starts here. */
+  /* sharedslack?? This one? */
+  /* Here they did the optimization. Maybe for one state.  */
   if(learn_parm->sharedslack)
     iterations=optimize_to_convergence_sharedslack(docs,label,totdoc,
 				     totwords,learn_parm,kernel_parm,
@@ -1124,7 +1126,7 @@ void svm_learn_optimization(DOC **docs, double *rhs, long int
     }
 
     printf("Optimization finished (maxdiff=%.5f).\n",maxdiff);
-
+/*************************************************************************/
     runtime_end=get_runtime();
     if(verbosity>=2) {
       printf("Runtime in cpu-seconds: %.2f (%.2f%% for kernel/%.2f%% for optimizer/%.2f%% for final/%.2f%% for update/%.2f%% for model/%.2f%% for check/%.2f%% for select)\n",
@@ -1354,7 +1356,7 @@ long optimize_to_convergence(DOC **docs, long int *label, long int totdoc,
   inactivenum=totdoc-activenum;
   clear_index(working2dnum);
 
-                            /* repeat this loop until we have convergence */
+  /* repeat this loop until we have convergence */
   for(;retrain && (!terminate);iteration++) {
 
     if(kernel_cache)
@@ -1793,6 +1795,7 @@ long optimize_to_convergence_sharedslack(DOC **docs, long int *label,
     kernel_cache_reset_lru(kernel_cache);
   }
 
+/**************** Initialize  *************************/
   for(i=0;i<totdoc;i++) {    /* various inits */
     chosen[i]=0;
     unlabeled[i]=0;
@@ -1802,15 +1805,16 @@ long optimize_to_convergence_sharedslack(DOC **docs, long int *label,
     a_old[i]=a[i];
     last_suboptimal_at[i]=1;
   }
+  /* activenum = number of examples with y_i = r ? */
   activenum=compute_index(shrink_state->active,totdoc,active2dnum);
   inactivenum=totdoc-activenum;
+  /* clear index? */
   clear_index(working2dnum);
 
-  /* call to init slack and alphaslack */
-  compute_shared_slacks(docs,label,a,lin,c,active2dnum,learn_parm,
-			slack,alphaslack);
+  /* call to init slack and alphaslack */ /* compute the value of shared slacks and the joint alphas */
+  compute_shared_slacks(docs,label,a,lin,c,active2dnum,learn_parm,slack,alphaslack);
 
-                            /* repeat this loop until we have convergence */
+  /* repeat this loop until we have convergence */
   for(;retrain && (!terminate);iteration++) {
 
     if(kernel_cache)
@@ -1835,6 +1839,7 @@ long optimize_to_convergence_sharedslack(DOC **docs, long int *label,
     jointstep=0;
     eq_target=0;
     if(iteration % 101) {
+      /* returns the slackset with the largest internal violation */
       slackset=select_next_qp_slackset(docs,label,a,lin,slack,alphaslack,c,
 				       learn_parm,active2dnum,&maxsharedviol);
       if((!(iteration % 100))
@@ -1850,13 +1855,13 @@ long optimize_to_convergence_sharedslack(DOC **docs, long int *label,
 			       learn_parm->svm_newvarsinqp)))) {
 	    chosen[j]=0;
 	    choosenum--;
-	  }
-	  else {
+	  }else {
 	    chosen[j]++;
 	    working2dnum[i++]=j;
 	  }
 	}
 	working2dnum[i]=-1;
+
 
 	already_chosen=0;
 	if((minl(learn_parm->svm_newvarsinqp,
@@ -1873,6 +1878,8 @@ long optimize_to_convergence_sharedslack(DOC **docs, long int *label,
 			      (long)1,key,chosen);
 	  choosenum+=already_chosen;
 	}
+
+	/******************** qp subproblem grad ************************/
 	choosenum+=select_next_qp_subproblem_grad(
                               label,unlabeled,a,lin,c,totdoc,
                               minl(learn_parm->svm_maxqpsize-choosenum,
@@ -3149,6 +3156,7 @@ long select_next_qp_subproblem_grad(long int *label,
       activedoc++;
     }
   }
+  /* select top n? */
   select_top_n(selcrit,activedoc,select,(long)(qp_size/2));
   for(k=0;(choosenum<qp_size) && (k<(qp_size/2)) && (k<activedoc);k++) {
     /* if(learn_parm->biased_hyperplane || (selcrit[select[k]] > 0)) { */
